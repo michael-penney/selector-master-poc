@@ -1,18 +1,16 @@
-import { Forecast } from "./types";
 import { Action } from "redux";
 
 export enum ActionType {
-    SET_FORECASTS = 'example.SET_FORECASTS'
+    SET_CHANGED_QUANTITY = 'example.SET_CHANGED_QUANTITY'
 }
 
-export function setForecasts(id: string, forecasts: Forecast[]): SetForecastsAction {
+export function setChangedQuantity(id: string, quantity: number): SetChangedQuantityAction {
     return {
-        type: ActionType,
-        id, forecasts
-    }
+        type: ActionType.SET_CHANGED_QUANTITY, id, quantity
+    };
 }
 
-export interface SetForecastsAction extends Action {
+export interface SetChangedQuantityAction extends Action<ActionType> {
     id: string,
-    forecasts: Forecast[]
+    quantity: number
 };

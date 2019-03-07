@@ -1,4 +1,5 @@
 import { DataState } from "./types";
+import { Map } from "immutable";
 
 export const data: DataState = {
     products: [
@@ -58,5 +59,6 @@ export const data: DataState = {
             { id: 'h1', quantity : 18 },
             { id: 'h2', quantity : 19 }
         ]
-    }
+    },
+    changedQuantities: Map()
 }

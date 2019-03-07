@@ -1,4 +1,7 @@
 import React, { useMemo } from 'react';
+import { Map } from 'immutable';
+import { Dispatch } from 'redux';
+import { connect } from 'react-redux';
 import { Container, Button } from 'react-bootstrap';
 
 import { StoreState as S, Product } from './types';
@@ -13,13 +16,16 @@ import { Providers } from './selector-master/providers';
 import SelectBinder from './selector-master/binders/SelectBinder';
 import FormField from './selector-master/FormField';
 
+import { setChangedQuantity } from './dataActions';
+
 interface Values {
     products: Product[],
     productNo: string,
     productDescription: string,
     data: Row[],
     data2: Row[]
-    selectedId: string
+    selectedId: string,
+    totalQuantity: number
 }
 
 const salesOrderColumns: Column[] = [
@@ -56,12 +62,32 @@ const providers: Providers<S, Values> = {
         dependsOn: ['data']
     },
     data2: {
-        value: (s: S, selectedId: string) => selectedId && s.data.forecasts[selectedId] ? dataToRows(s.data.forecasts[selectedId], (f) => f.id, forecastColumns) : [],
-        dependsOn: ['selectedId']
+        value: (s: S, selectedId: string, changedQuantities: Map<string, number>) => {
+            const rows =  selectedId && s.data.forecasts[selectedId] ? dataToRows(s.data.forecasts[selectedId], (f) => f.id, forecastColumns) : [];
+
+            // merge rows with changed quantities.
+            // Maybe we want to build this into the grid component somehow - But for now it's a manual step.
+            for (let row of rows) {
+                const changedQuantity = changedQuantities.get(row[0]);
+                if (changedQuantity != null)
+                    row[1] = changedQuantity;
+            }
+
+            return rows;
+        },
+        dependsOn: ['selectedId', (s: S) => s.data.changedQuantities]
+    },
+    totalQuantity: {
+        value: (s: S, data: Row[]) => data.reduce((acc, d) => acc + parseFloat(d[1]), 0),
+        dependsOn: ['data2']
     }
 }
 
-export default function SuperForm() {
+type FormProps = {
+    dispatch: Dispatch
+}
+
+function SuperForm({ dispatch }: FormProps) {
     return <FormModel
         formId="form-1"
         providers={providers}
@@ -102,17 +128,24 @@ export default function SuperForm() {
                         onChanged={(v: string) => actions.setValue('selectedId', v)}/>
                 </FormField>
 
+                <FormField label="Total">
+                    <TextBinder
+                        value={'' + values.totalQuantity}/>
+                </FormField>
+
                 <GridReactive
                     gridId="grid-2"
                     data={values.data2}
+                    onValueChanged={(id, key, value) => dispatch(setChangedQuantity(id, parseFloat(value)))}
                     opts={{
                         columns: forecastColumns
                     }}
                     extensions={{
                         editing: true
                     }}/>
-
             </Container>
         }}
     </FormModel>
 }
+
+export default connect()(SuperForm);

@@ -2,7 +2,7 @@ import { Map, Record, List } from 'immutable';
 
 export interface BinderProps<T> {
     value: T,
-    onChanged: (x: T) => void
+    onChanged?: (x: T) => void
 }
 
 export interface FormActions<V> {

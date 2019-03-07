@@ -1,4 +1,5 @@
 import { FormsState } from "./selector-master/types";
+import { Map } from "immutable";
 
 export interface Product {
     name: string,
@@ -21,7 +22,8 @@ export interface Forecast {
 export interface DataState {
     products: Product[],
     salesOrders: { [key: string]: SalesOrder[] },
-    forecasts: { [key: string]: Forecast[] }
+    forecasts: { [key: string]: Forecast[] },
+    changedQuantities: Map<string, number>
 }
 
 export interface StoreState {
