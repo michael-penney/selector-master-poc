@@ -12,11 +12,11 @@ import { dataToRows } from './powergrid/helpers';
 
 import FormModel from './selector-master/FormModel';
 import TextBinder from './selector-master/binders/TextBinder';
-import { Providers } from './selector-master/providers';
 import SelectBinder from './selector-master/binders/SelectBinder';
 import FormField from './selector-master/FormField';
 
 import { setChangedQuantity } from './dataActions';
+import { Providers } from './selector-master/providers';
 
 interface Values {
     products: Product[],

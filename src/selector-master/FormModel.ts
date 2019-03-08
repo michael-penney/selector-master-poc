@@ -3,16 +3,18 @@ import { connect } from 'react-redux';
 
 import { FormModel, FormActions, FormsState } from './types';
 import { setFormValue, resetAllFormValues } from './actions';
-import { createProvidersSelector, Providers } from './providers';
+import { Providers, createProvidersSelector } from './providers';
+import { Map } from 'immutable';
+import { getFormValues } from './selectors';
 
 type RenderChildrenFn<V> = (formModel: FormModel<V>) => ReactElement;
 
-type OwnProps<TProvided = {}, TValues = {}, TState = any> = {
+type OwnProps<Provided = {}, Values = {}, State = any> = {
     formId: string,
-    selectState: (s: TState) => FormsState,
-    providers?: Providers<TState, TProvided>,
-    values?: TValues,
-    children: RenderChildrenFn<TProvided & TValues>
+    selectState: (s: State) => FormsState,
+    providers: Providers<State, Provided>,
+    values?: Values,
+    children: RenderChildrenFn<Provided & Values>
 };
 
 type DispatchProps = {
@@ -20,8 +22,8 @@ type DispatchProps = {
     resetAllFormValues: typeof resetAllFormValues
 };
 
-type StateProps<TProvided> = {
-    providedValues: TProvided|undefined
+type StateProps<Provided> = {
+    providedValues: Provided
 };
 
 type InnerProps = {
@@ -29,47 +31,49 @@ type InnerProps = {
     children: RenderChildrenFn<any>
 }
 
-// Memoized inner component. Only call render when the props changed
-const InnerComponent = React.memo(function FormModelInner({ formModel, children }: InnerProps) {
-    return children(formModel);
-});
+// Memoized inner component. Only call render function when the props changed
+const InnerComponent = React.memo(
+    function FormModelInner({ formModel, children }: InnerProps) {
+        return children(formModel);
+    }
+);
 
-function FormModelComponent<TProvided, TValues, TState>(props: StateProps<TProvided> & DispatchProps & OwnProps<TProvided, TValues, TState>) {
-    const { formId, values: propValues, providedValues, children,
-        setFormValue, resetAllFormValues } = props;
-        
-    type V = TProvided & TValues;
+function FormModelComponent<Provided, Values, State>(props: StateProps<Provided> & DispatchProps & OwnProps<Provided, Values, State>) {
+    const {
+        children, formId, values: propValues,
+        resetAllFormValues, setFormValue, providedValues
+    } = props;
 
-    // merge the provided values with values passed in the props
-    const valuesMerged = Object.assign({}, propValues, providedValues);
+    // merge the provided values with the values passed in props
+    const valuesMerged = useMemo(() => Object.assign({}, propValues, providedValues), [propValues, providedValues]);
 
-    // build the form-actions object
-    const actions = useMemo<FormActions<V>>(() => ({
+    // build the form-actions
+    const actions = useMemo<FormActions<Provided & Values>>(() => ({
         setValue: setFormValue.bind(null, formId) as any,
         resetAllValues: resetAllFormValues.bind(null, formId)
     }), [formId, valuesMerged, setFormValue, resetAllFormValues]);
 
     // build the form-model
-    const formModel = useMemo<FormModel<V>>(() => ({
+    const formModel = useMemo<FormModel<Provided & Values>>(() => ({
         formId,
         values: valuesMerged,
         actions
     }), [formId, valuesMerged, actions]);
 
+    // render the inner component
     return React.createElement(InnerComponent, { children, formModel });
 }
 
 export default connect(
-    <TProvided, TValues, TState>(_state: TState, { providers, formId, selectState }: OwnProps<TProvided, TValues, TState>) => {
-        const selectProvided = providers && createProvidersSelector(providers);
-
-        return (state: TState): StateProps<TProvided> => {
+    <Provided, Values, State>(state: State, { formId, providers, selectState }: OwnProps<Provided, Values, State>) => {
+        const selectProvided = createProvidersSelector(providers);
+        return (state: State): StateProps<Provided> => {
             const formsState = selectState(state);
-            const form = formsState.get('forms').get(formId);
-            const formValues = form && form.get('values');
+            const formValues = getFormValues(formsState, formId) as Map<keyof Provided, any>;
             return {
-                providedValues: selectProvided && selectProvided(state, formValues)
+                providedValues: selectProvided(state, formValues)
             }
+
         }
     },
     { setFormValue, resetAllFormValues }
