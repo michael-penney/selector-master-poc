@@ -19,6 +19,7 @@ export class Datasource implements IDatasource {
     }
 
     updateData(data: Row[]) {
+        if (data === this.data) return;
         const oldData = this.data;
         this.data = data;
         this.lookupById = this.computeLookupById(data);

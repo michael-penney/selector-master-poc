@@ -114,9 +114,7 @@ function SuperForm({ dispatch }: FormProps) {
                 <GridReactive
                     gridId="grid-1"
                     data={values.data}
-                    opts={{
-                        columns: salesOrderColumns
-                    }}
+                    columns={salesOrderColumns}
                     extensions={{
                         selection: true
                     }}
@@ -137,9 +135,7 @@ function SuperForm({ dispatch }: FormProps) {
                     gridId="grid-2"
                     data={values.data2}
                     onValueChanged={(id, key, value) => dispatch(setChangedQuantity(id, parseFloat(value)))}
-                    opts={{
-                        columns: forecastColumns
-                    }}
+                    columns={forecastColumns}
                     extensions={{
                         editing: true
                     }}/>

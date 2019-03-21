@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import Grid from './Grid';
 import { PowergridOpts, Row } from './types';
@@ -6,11 +6,11 @@ import { Datasource } from './Datasource';
 import { createExtensions, ExtensionOpts, ExtsContext, OnSelectionChangedFn, PgExts } from './extensions/extensions';
 
 /**
- * Wrapper around the powergrid component.
- * Creates a datasource and initializes the extensions.
+ * React Wrapper around the powergrid component imperative API. Manages creation of a datasource / extensions.
+ * Watches changes in the component props and triggers changes.
  */
 
-type Opts = Pick<PowergridOpts, Exclude<keyof PowergridOpts, 'dataSource' | 'extensions' | 'data' | 'rootId'>>;
+type ExtraPgOpts = Pick<PowergridOpts, Exclude<keyof PowergridOpts, 'dataSource'|'extensions'|'rootId'>>;
 
 export type OnValueChangedFn = (id: string, key: number, value: string) => void;
 
@@ -18,67 +18,47 @@ type Props = {
     gridId: string,
     data: Row[],
     extensions: ExtensionOpts,
-    opts: Opts,
     onValueChanged?: OnValueChangedFn,
     onSelectionChanged?: OnSelectionChangedFn
-}
-
-type InitialState = {
-    extsContext: ExtsContext,
-    pgExtensions: PgExts,
-    dataSource: Datasource
-}
+} & ExtraPgOpts;
 
 export default function GridReactive(props: Props) {
-    const { gridId, extensions, opts, data, onValueChanged, onSelectionChanged } = props;
+    const { gridId, data, extensions, onValueChanged, onSelectionChanged, ...extraOpts } = props;
 
-    // use useRef instead of useMemo, because we require a guarantee that the
-    // initial-state will never be re-created. UseMemo is an "optimization" and might not offer that guarantee in the future.
-    const initialStateRef = useRef<InitialState|null>(null);
-    function getInitialState(): InitialState {
-        let initialState = initialStateRef.current;
-        if (initialState != null) return initialState;
-
-        // create the extensions context object
+    // construct the initial state
+    const [{ dataSource, extsContext, pgExtensions }] = useState(() => {
+        // create the context object
         const extsContext: ExtsContext = {
             onRowSelected: onSelectionChanged
         };
 
-        // create powergrid extensions
+        // create the powergrid extensions. Pass in the "context", to act
+        // as a reference to the latest props passed into the component
         const pgExtensions = createExtensions(extensions, extsContext);
 
-        // create powergrid datasource
+        // create the datasource
         const dataSource = new Datasource(data);
+        dataSource.onValueChanged(onValueChanged);
 
-        // create the initial state
-        initialState = {
+        return {
             extsContext,
             pgExtensions,
             dataSource
         };
-
-        initialStateRef.current = initialState;
-        return initialState;
-    }
-
-    const { dataSource, extsContext, pgExtensions } = getInitialState();
+    })
     
     // update the datasource when the data changed
-    useEffect(() => {
-        dataSource.updateData(data);
-    }, [data]);
+    useEffect(() => { dataSource.updateData(data); }, [data]);
 
     // update the datasource onValueChanged callback
-    useEffect(() => {
-        dataSource.onValueChanged(onValueChanged);
-    }, [onValueChanged]);
+    useEffect(() => { dataSource.onValueChanged(onValueChanged); }, [onValueChanged]);
 
-    // update the callbacks in the extensions context
+    // update the extensions context
     useEffect(() => {
         extsContext.onRowSelected = onSelectionChanged;
     }, [onSelectionChanged]);
 
     const rootId = gridId;
-    const allOpts: PowergridOpts = { ...opts, rootId, dataSource, extensions: pgExtensions };
-    return <Grid rootId={gridId} opts={allOpts}/>
+    const opts: PowergridOpts = { ...extraOpts, rootId, dataSource, extensions: pgExtensions };
+    return <Grid rootId={gridId} opts={opts}/>
 }
